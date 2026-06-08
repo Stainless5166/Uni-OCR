@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { ShieldAlert, Globe, Lock, QrCode, Key, Cpu, Trash2, Server, HardDrive, Network, Clock } from 'lucide-react';
+import { ShieldAlert, Globe, Lock, QrCode, Key, Cpu, Trash2, Server, HardDrive, Network, Clock, Copy, Check, X } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
 export default function Settings() {
@@ -14,6 +14,9 @@ export default function Settings() {
   const [verifyCode, setVerifyCode] = useState('');
   const [passwordFor2fa, setPasswordFor2fa] = useState('');
   const [message, setMessage] = useState({ text: '', type: '' });
+  
+  const [newlyCreatedKey, setNewlyCreatedKey] = useState<string | null>(null);
+  const [keyCopied, setKeyCopied] = useState(false);
 
   const loadData = async () => {
     try {
@@ -88,7 +91,8 @@ export default function Settings() {
       loadData();
       
       const rawKey = res.data.api_key;
-      alert(`API Key Created!\n\nPlease save this key now. It will NEVER be shown again:\n\n${rawKey}`);
+      setNewlyCreatedKey(rawKey);
+      setKeyCopied(false);
       
     } catch (err: any) {
       setMessage({ text: err.response?.data?.detail || 'Failed to create API key', type: 'error' });
@@ -376,6 +380,51 @@ export default function Settings() {
           </div>
         </div>
       </section>
+
+      {/* API Key Modal */}
+      {newlyCreatedKey && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="glass-panel p-8 max-w-md w-full flex flex-col gap-6 relative shadow-2xl border-primary/30">
+            <button 
+              onClick={() => setNewlyCreatedKey(null)}
+              className="absolute top-4 right-4 text-white/50 hover:text-white transition-colors"
+            >
+              <X size={20} />
+            </button>
+            
+            <div className="flex flex-col items-center text-center gap-2">
+              <div className="w-16 h-16 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center mb-2">
+                <Key size={32} />
+              </div>
+              <h3 className="text-2xl font-bold text-white">API Key Created!</h3>
+              <p className="text-red-400 text-sm font-medium mt-1 bg-red-500/10 px-3 py-1 rounded-full">
+                Please save this key now. It will NEVER be shown again!
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 bg-black/50 p-4 rounded-xl border border-white/10">
+              <code className="text-primary font-mono text-sm break-all flex-1">{newlyCreatedKey}</code>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(newlyCreatedKey);
+                  setKeyCopied(true);
+                  setTimeout(() => setKeyCopied(false), 2000);
+                }}
+                className="shrink-0 p-2 rounded-lg bg-white/5 hover:bg-white/10 text-white transition-colors border border-white/10"
+              >
+                {keyCopied ? <Check size={20} className="text-green-400" /> : <Copy size={20} />}
+              </button>
+            </div>
+
+            <button 
+              onClick={() => setNewlyCreatedKey(null)}
+              className="glass-button-primary w-full mt-2"
+            >
+              I have saved it securely
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   );
