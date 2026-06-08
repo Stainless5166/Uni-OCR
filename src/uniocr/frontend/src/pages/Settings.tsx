@@ -127,34 +127,30 @@ export default function Settings() {
           <h3 className="text-xl font-bold">System Status</h3>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* OS Info */}
-          <div className="glass-panel p-5 flex flex-col justify-between">
-            <div className="flex items-center gap-2 text-white/50 mb-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Node Details */}
+          <div className="glass-panel p-5 flex flex-col gap-4">
+            <div className="flex items-center gap-2 text-white/50 mb-1">
               <Server size={16} />
-              <span className="text-xs font-bold uppercase tracking-wider">Platform</span>
+              <span className="text-xs font-bold uppercase tracking-wider">Node Details</span>
             </div>
-            <div>
-              <p className="text-white font-medium text-lg">{systemInfo.os} {systemInfo.release}</p>
-              <p className="text-white/60 text-sm">{systemInfo.arch}</p>
-              <p className="text-white/40 text-xs mt-1">Python {systemInfo.python_version}</p>
-            </div>
-          </div>
-
-          {/* Network & Uptime */}
-          <div className="glass-panel p-5 flex flex-col justify-between">
-            <div className="flex items-center gap-2 text-white/50 mb-3">
-              <Network size={16} />
-              <span className="text-xs font-bold uppercase tracking-wider">Network & Uptime</span>
-            </div>
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <span className="text-white/60 text-sm">Local IP</span>
-                <span className="text-white font-mono text-sm">{systemInfo.network_ip}</span>
+            
+            <div className="flex flex-col gap-4 h-full justify-between">
+              <div>
+                <p className="text-white font-medium text-lg">{systemInfo.os} {systemInfo.release}</p>
+                <p className="text-white/60 text-sm">{systemInfo.arch}</p>
+                <p className="text-white/40 text-xs mt-1">Python {systemInfo.python_version}</p>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-white/60 text-sm flex items-center gap-1"><Clock size={12}/> Uptime</span>
-                <span className="text-white font-medium text-sm">{systemInfo.uptime_hours} hrs</span>
+              
+              <div className="bg-white/5 p-3 rounded-xl border border-white/5 flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-white/60 text-xs flex items-center gap-1"><Network size={12}/> Local IP</span>
+                  <span className="text-white font-mono text-xs">{systemInfo.network_ip}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-white/60 text-xs flex items-center gap-1"><Clock size={12}/> Uptime</span>
+                  <span className="text-white font-medium text-xs">{systemInfo.uptime_hours} hrs</span>
+                </div>
               </div>
             </div>
           </div>
