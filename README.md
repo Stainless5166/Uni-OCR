@@ -161,7 +161,7 @@ docker compose up -d
 ```bash
 # Health check
 curl http://localhost:8000/health
-# → {"status":"ok","version":"0.1.0","engines":["paddle","apple"]}
+# → {"status":"ok","version":"0.2.1","engines":["paddle","apple"]}
 
 # Upload a file
 curl -X POST http://localhost:8000/extract \

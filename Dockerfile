@@ -13,7 +13,7 @@ COPY pyproject.toml README.md LICENSE ./
 COPY src/ src/
 
 # Install uniocr with PaddleOCR + API deps
-RUN pip install --no-cache-dir -e ".[paddle,api]"
+RUN pip install --no-cache-dir ".[paddle,api]"
 
 # Pre-download models on build (optional but recommended for faster cold start)
 # RUN python -c "from paddleocr import PaddleOCRVL; PaddleOCRVL(device='cpu')"

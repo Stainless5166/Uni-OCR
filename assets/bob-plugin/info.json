@@ -1,6 +1,6 @@
 {
   "identifier": "com.yuanweize.uniocr.bobplugin",
-  "version": "0.1.0",
+  "version": "0.2.1",
   "category": "ocr",
   "name": "UniOCR (Local)",
   "author": "Weize Yuan",

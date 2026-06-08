@@ -1,6 +1,6 @@
 [project]
 name = "uniocr"
-version = "0.1.0"
+version = "0.2.1"
 description = "UniOCR - Unified multilingual OCR abstraction layer with pluggable engine support."
 readme = "README.md"
 authors = [
