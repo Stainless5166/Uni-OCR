@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: #0a0a0c;
+    --foreground: #ededef;
+    
+    --glass-bg: rgba(255, 255, 255, 0.05);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    
+    --primary: #5e6ad2;
+    --primary-foreground: #ffffff;
+  }
+  
+  body {
+    @apply bg-background text-foreground antialiased min-h-screen overflow-x-hidden;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply bg-glass backdrop-blur-xl border border-glass-border rounded-2xl shadow-2xl;
+  }
+  
+  .glass-input {
+    @apply bg-black/20 border border-white/10 rounded-lg px-4 py-2 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-primary transition-all;
+  }
+  
+  .glass-button {
+    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 active:scale-95;
+  }
+  
+  .glass-button-primary {
+    @apply glass-button bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_0_20px_rgba(94,106,210,0.3)] hover:shadow-[0_0_30px_rgba(94,106,210,0.5)];
+  }
+  
+  .glass-button-secondary {
+    @apply glass-button bg-white/5 border border-white/10 hover:bg-white/10 text-white;
+  }
+}
+
+/* Ambient animated background blobs */
+.ambient-blob {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(100px);
+  z-index: -1;
+  opacity: 0.4;
+  animation: float 20s infinite ease-in-out;
+}
+
+@keyframes float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -50px) scale(1.1); }
+  66% { transform: translate(-20px, 20px) scale(0.9); }
+}

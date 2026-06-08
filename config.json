@@ -1,0 +1,8 @@
+{
+    "admin_password_hash": "$2b$12$1fG2Y79ak4Akdn35C5WGe.yE.ArKJvsLsa9DWLys0nJnJVJcD2Of6",
+    "jwt_secret": "45f4325405b9ba2a4a49a05d8c7d5b241af724bf13e600c215c2bf10e2f96ca6",
+    "totp_secret": null,
+    "is_2fa_enabled": false,
+    "is_ocr_public": true,
+    "totp_secret_pending": "H2GMWNMBFLNXHGVS6BERNSFIANPDUM45"
+}

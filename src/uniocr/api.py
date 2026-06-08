@@ -17,7 +17,8 @@ import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile, status
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile, status, Depends
+from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
@@ -27,6 +28,7 @@ from pydantic import BaseModel, Field
 from . import UniOCR, list_available_engines
 from .models import Document
 from .exporters.pdf import export_to_pdf
+from .routers_auth import router as auth_router, verify_public_or_authenticated
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +55,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(auth_router)
 
 # ---------------------------------------------------------------------------
 # Standardised Error Handling (RFC 7807)
@@ -211,7 +215,7 @@ async def engines() -> Dict[str, Any]:
     return {"available_engines": list_available_engines()}
 
 
-@app.post("/extract", tags=["OCR"])
+@app.post("/extract", tags=["OCR"], dependencies=[Depends(verify_public_or_authenticated)])
 async def extract_file(
     file: UploadFile = File(..., description="Image or PDF file to process"),
     engine: str = Form("auto", description="Engine: auto | paddle | apple"),
@@ -241,7 +245,7 @@ async def extract_file(
     return JSONResponse(content=_build_response(doc, elapsed))
 
 
-@app.post("/extract/url", tags=["OCR"])
+@app.post("/extract/url", tags=["OCR"], dependencies=[Depends(verify_public_or_authenticated)])
 async def extract_url(
     url: str = Form(..., description="Public URL of an image or PDF"),
     engine: str = Form("auto", description="Engine: auto | paddle | apple"),
@@ -261,7 +265,7 @@ async def extract_url(
     return JSONResponse(content=_build_response(doc, elapsed))
 
 
-@app.post("/extract/base64", tags=["OCR"])
+@app.post("/extract/base64", tags=["OCR"], dependencies=[Depends(verify_public_or_authenticated)])
 async def extract_base64(req: ExtractBase64Request) -> JSONResponse:
     """Extract text and layout from a Base64-encoded string (application/json).
     
@@ -329,7 +333,7 @@ async def extract_batch(
     }
 
 
-@app.post("/extract/pdf", response_class=FileResponse, tags=["OCR"])
+@app.post("/extract/pdf", response_class=FileResponse, tags=["OCR"], dependencies=[Depends(verify_public_or_authenticated)])
 async def extract_to_pdf(
     file: UploadFile = File(..., description="Image or PDF file to process"),
     engine: str = Form("auto", description="Engine: auto | paddle | apple"),
@@ -371,3 +375,19 @@ async def extract_to_pdf(
         filename=f"searchable_{file.filename}.pdf" if file.filename else "searchable.pdf",
         background=BackgroundTask(cleanup),
     )
+
+# ---------------------------------------------------------------------------
+# SPA Static Files Fallback
+# ---------------------------------------------------------------------------
+frontend_dist = Path(__file__).parent / "static"
+if frontend_dist.exists() and (frontend_dist / "index.html").exists():
+    app.mount("/assets", StaticFiles(directory=frontend_dist / "assets"), name="assets")
+    
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def serve_frontend(full_path: str):
+        # Serve exact file if exists
+        target_file = frontend_dist / full_path
+        if target_file.exists() and target_file.is_file():
+            return FileResponse(target_file)
+        # Fallback to index.html for SPA routing
+        return FileResponse(frontend_dist / "index.html")

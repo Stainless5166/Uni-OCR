@@ -25,6 +25,9 @@ api = [
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.32.0",
     "python-multipart>=0.0.18",
+    "pyotp>=2.9.0",
+    "PyJWT>=2.8.0",
+    "bcrypt>=4.2.0",
 ]
 all = [
     "uniocr[paddle,apple,api]",
