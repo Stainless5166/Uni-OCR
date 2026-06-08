@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { ShieldAlert, Globe, Lock, QrCode, Key, Cpu, Trash2, Server, HardDrive, Network, Clock, Copy, Check, X } from 'lucide-react';
+import { ShieldAlert, Globe, Lock, QrCode, Key, Cpu, Trash2, Server, HardDrive, Clock, Copy, Check, X, Terminal, ExternalLink } from 'lucide-react';
+import { Network } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
 export default function Settings() {
@@ -277,6 +278,11 @@ export default function Settings() {
                 <div className={`w-6 h-6 bg-white rounded-full absolute top-1 transition-all ${config.is_ocr_public ? 'left-7' : 'left-1'}`} />
               </button>
             </div>
+            {config.is_ocr_public && (
+              <a href="/" target="_blank" rel="noreferrer" className="flex items-center justify-center gap-2 w-full py-2.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-xl transition-colors font-medium text-sm mt-1">
+                <ExternalLink size={16} /> Open Public Interface
+              </a>
+            )}
           </div>
 
           {/* Change Password */}
@@ -386,12 +392,26 @@ export default function Settings() {
                   <p className="text-white font-medium">{key.name}</p>
                   <p className="text-white/40 text-xs font-mono mt-1">{key.prefix} • Created {new Date(key.created_at).toLocaleDateString()}</p>
                 </div>
-                <button 
-                  onClick={() => handleDeleteApiKey(key.id)}
-                  className="px-3 py-1.5 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors border border-transparent hover:border-red-500/30 flex items-center gap-2 text-sm font-medium"
-                >
-                  <Trash2 size={16} /> Revoke
-                </button>
+                <div className="flex items-center gap-1">
+                  <button 
+                    onClick={() => {
+                      const host = window.location.origin;
+                      const curl = `curl -X POST ${host}/api/ocr \\\n  -H "Authorization: Bearer <YOUR_API_KEY>" \\\n  -H "Content-Type: multipart/form-data" \\\n  -F "file=@/path/to/image.png"`;
+                      navigator.clipboard.writeText(curl);
+                      alert("Test curl snippet copied! Replace <YOUR_API_KEY> with your actual key.");
+                    }}
+                    className="px-3 py-1.5 text-blue-400 hover:bg-blue-500/20 rounded-lg transition-colors border border-transparent flex items-center gap-2 text-sm font-medium"
+                    title="Copy test code"
+                  >
+                    <Terminal size={16} /> Test Code
+                  </button>
+                  <button 
+                    onClick={() => handleDeleteApiKey(key.id)}
+                    className="px-3 py-1.5 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors border border-transparent hover:border-red-500/30 flex items-center gap-2 text-sm font-medium"
+                  >
+                    <Trash2 size={16} /> Revoke
+                  </button>
+                </div>
               </div>
             ))}
             {apiKeys.length === 0 && <p className="text-white/30 text-sm py-4">No API keys created yet.</p>}
@@ -434,12 +454,27 @@ export default function Settings() {
               </button>
             </div>
 
-            <button 
-              onClick={() => setNewlyCreatedKey(null)}
-              className="glass-button-primary w-full mt-2"
-            >
-              I have saved it securely
-            </button>
+            <div className="flex flex-col gap-3 w-full mt-2">
+              <button
+                onClick={() => {
+                  const host = window.location.origin;
+                  const curl = `curl -X POST ${host}/api/ocr \\\n  -H "Authorization: Bearer ${newlyCreatedKey}" \\\n  -H "Content-Type: multipart/form-data" \\\n  -F "file=@/path/to/image.png"`;
+                  navigator.clipboard.writeText(curl);
+                  setKeyCopied(true);
+                  setTimeout(() => setKeyCopied(false), 2000);
+                }}
+                className="flex items-center justify-center gap-2 w-full py-2.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-xl transition-colors text-sm font-medium border border-blue-500/20"
+              >
+                <Terminal size={16} /> Copy Test curl Snippet
+              </button>
+
+              <button 
+                onClick={() => setNewlyCreatedKey(null)}
+                className="glass-button-primary w-full"
+              >
+                I have saved it securely
+              </button>
+            </div>
           </div>
         </div>
       )}
