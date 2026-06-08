@@ -18,16 +18,22 @@ export default function Settings() {
   const [newlyCreatedKey, setNewlyCreatedKey] = useState<string | null>(null);
   const [keyCopied, setKeyCopied] = useState(false);
 
+  const loadSystemInfo = async () => {
+    try {
+      const sysRes = await axios.get('/api/system/info');
+      setSystemInfo(sysRes.data);
+    } catch (err) {}
+  };
+
   const loadData = async () => {
     try {
-      const [confRes, sysRes, keysRes] = await Promise.all([
+      const [confRes, keysRes] = await Promise.all([
         axios.get('/api/config'),
-        axios.get('/api/system/info'),
         axios.get('/api/apikeys')
       ]);
       setConfig(confRes.data);
-      setSystemInfo(sysRes.data);
       setApiKeys(keysRes.data);
+      await loadSystemInfo();
     } catch (err) {
       setMessage({ text: 'Failed to load settings. Please log in again.', type: 'error' });
     }
@@ -35,6 +41,8 @@ export default function Settings() {
 
   useEffect(() => {
     loadData();
+    const interval = setInterval(loadSystemInfo, 3000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleTogglePublic = async () => {
@@ -177,6 +185,15 @@ export default function Settings() {
               </div>
               <div>
                 <div className="flex justify-between items-end mb-1">
+                  <span className="text-white/60 text-xs">GPU - {systemInfo.gpu_model}</span>
+                  <span className="text-white text-xs font-medium">{systemInfo.gpu_percent}%</span>
+                </div>
+                <div className="w-full h-1.5 bg-black/40 rounded-full overflow-hidden">
+                  <div className={`h-full ${systemInfo.gpu_percent > 80 ? 'bg-red-500' : 'bg-purple-500'}`} style={{ width: `${systemInfo.gpu_percent}%` }} />
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between items-end mb-1">
                   <span className="text-white/60 text-xs">RAM ({systemInfo.memory_used_gb} GB / {systemInfo.memory_total_gb} GB)</span>
                   <span className="text-white text-xs font-medium">{systemInfo.memory_used_percent}%</span>
                 </div>
@@ -202,13 +219,6 @@ export default function Settings() {
                   <div className={`h-full ${systemInfo.swap_percent > 50 ? 'bg-red-500' : 'bg-orange-500'}`} style={{ width: `${systemInfo.swap_percent}%` }} />
                 </div>
               </div>
-              <div className="flex items-center justify-between mt-1 pt-3 border-t border-white/10">
-                <span className="text-white/60 text-[10px] uppercase font-bold tracking-wider">Network I/O</span>
-                <span className="text-white/80 text-xs font-medium flex gap-2">
-                  <span className="text-blue-400">↓ {systemInfo.net_recv_mb} MB</span>
-                  <span className="text-green-400">↑ {systemInfo.net_sent_mb} MB</span>
-                </span>
-              </div>
             </div>
           </div>
 
@@ -219,10 +229,6 @@ export default function Settings() {
               <span className="text-xs font-bold uppercase tracking-wider">Accelerators & GPU</span>
             </div>
             <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between bg-white/5 p-2 rounded-lg border border-white/5 mb-1">
-                <span className="text-white/70 text-[10px] uppercase font-bold tracking-wider">Detected GPU</span>
-                <span className="text-white/90 text-xs font-medium">{systemInfo.gpu_model}</span>
-              </div>
               <div className="flex items-center justify-between bg-white/5 p-2 rounded-lg border border-white/5">
                 <span className="text-white/70 text-xs">Apple Neural Engine</span>
                 <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${systemInfo.apple_silicon ? 'bg-green-500/20 text-green-400' : 'bg-white/10 text-white/40'}`}>

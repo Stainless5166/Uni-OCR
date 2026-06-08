@@ -48,6 +48,24 @@ def get_gpu_info():
             pass
     return "No Dedicated GPU / Unknown"
 
+def get_gpu_percent():
+    sys_os = platform.system()
+    if sys_os == "Darwin":
+        try:
+            out = subprocess.check_output(["ioreg", "-l", "-w", "0"], text=True)
+            match = re.search(r"\"Device Utilization %\"=(\d+)", out)
+            if match:
+                return int(match.group(1))
+        except Exception:
+            pass
+    elif sys_os == "Linux":
+        try:
+            out = subprocess.check_output(["nvidia-smi", "--query-gpu=utilization.gpu", "--format=csv,noheader,nounits"], text=True)
+            return int(out.strip().split('\n')[0])
+        except Exception:
+            pass
+    return 0
+
 @router.get("/info", dependencies=[Depends(get_current_user)])
 def get_system_info():
     vmem = psutil.virtual_memory()
@@ -80,9 +98,8 @@ def get_system_info():
         "swap_total_gb": round(swap.total / (1024**3), 2),
         "swap_used_gb": round(swap.used / (1024**3), 2),
         "swap_percent": swap.percent,
-        "net_sent_mb": round(net.bytes_sent / (1024**2), 2),
-        "net_recv_mb": round(net.bytes_recv / (1024**2), 2),
         "gpu_model": get_gpu_info(),
+        "gpu_percent": get_gpu_percent(),
         "uptime_hours": round((time.time() - psutil.boot_time()) / 3600, 1),
         "network_ip": socket.gethostbyname(socket.gethostname()) if socket.gethostname() else "127.0.0.1",
         "apple_silicon": False,
