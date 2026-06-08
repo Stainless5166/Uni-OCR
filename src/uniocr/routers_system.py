@@ -4,6 +4,7 @@ import time
 import socket
 import subprocess
 import re
+from importlib.metadata import version, PackageNotFoundError
 from fastapi import APIRouter, Depends
 from .routers_auth import get_current_user
 
@@ -79,9 +80,14 @@ def get_system_info():
     disk_used_gb = disk_total_gb - disk_free_gb
     
     swap = psutil.swap_memory()
-    net = psutil.net_io_counters()
+    
+    try:
+        uni_ver = version("uniocr")
+    except PackageNotFoundError:
+        uni_ver = "0.2.3" # Fallback
 
     info = {
+        "uniocr_version": uni_ver,
         "os": platform.system(),
         "release": platform.release(),
         "arch": platform.machine(),

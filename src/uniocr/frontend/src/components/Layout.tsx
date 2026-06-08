@@ -28,13 +28,13 @@ export default function Layout() {
               <ScanText size={20} />
               <span className="hidden md:block font-medium">Console</span>
             </NavLink>
-            <NavLink to="/docs-ui" className={({isActive}) => `flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${isActive ? 'bg-white/10 text-white shadow-inner' : 'text-white/50 hover:bg-white/5 hover:text-white'}`}>
-              <FileCode2 size={20} />
-              <span className="hidden md:block font-medium">API Docs</span>
-            </NavLink>
             <NavLink to="/settings" className={({isActive}) => `flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${isActive ? 'bg-white/10 text-white shadow-inner' : 'text-white/50 hover:bg-white/5 hover:text-white'}`}>
               <Settings size={20} />
               <span className="hidden md:block font-medium">Settings</span>
+            </NavLink>
+            <NavLink to="/docs-ui" className={({isActive}) => `flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${isActive ? 'bg-white/10 text-white shadow-inner' : 'text-white/50 hover:bg-white/5 hover:text-white'}`}>
+              <FileCode2 size={20} />
+              <span className="hidden md:block font-medium">API Docs</span>
             </NavLink>
           </nav>
         </div>

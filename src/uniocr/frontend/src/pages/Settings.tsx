@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { ShieldAlert, Globe, Lock, QrCode, Key, Cpu, Trash2, Server, HardDrive, Clock, Copy, Check, X, Terminal, ExternalLink } from 'lucide-react';
+import { ShieldAlert, Globe, Lock, QrCode, Key, Cpu, Trash2, Server, HardDrive, Clock, Copy, Check, X, Terminal, ExternalLink, Tag } from 'lucide-react';
 import { Network } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
@@ -18,6 +18,7 @@ export default function Settings() {
   
   const [newlyCreatedKey, setNewlyCreatedKey] = useState<string | null>(null);
   const [keyCopied, setKeyCopied] = useState(false);
+  const [latestVersion, setLatestVersion] = useState<string | null>(null);
 
   const loadSystemInfo = async () => {
     try {
@@ -42,6 +43,11 @@ export default function Settings() {
 
   useEffect(() => {
     loadData();
+    // Fetch latest version from GitHub
+    axios.get('https://api.github.com/repos/yuanweize/uni-ocr/releases/latest')
+      .then(res => setLatestVersion(res.data.tag_name))
+      .catch(() => {});
+      
     const interval = setInterval(loadSystemInfo, 3000);
     return () => clearInterval(interval);
   }, []);
@@ -156,6 +162,15 @@ export default function Settings() {
               </div>
               
               <div className="bg-white/5 p-3 rounded-xl border border-white/5 flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-white/60 text-xs flex items-center gap-1"><Tag size={12}/> Current Version</span>
+                  <span className="text-white font-mono text-xs font-bold text-primary">v{systemInfo.uniocr_version}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-white/60 text-xs flex items-center gap-1"><Globe size={12}/> Latest Release</span>
+                  <span className="text-white font-mono text-xs">{latestVersion || 'Checking...'}</span>
+                </div>
+                <div className="h-[1px] bg-white/10 my-1 w-full" />
                 <div className="flex items-center justify-between">
                   <span className="text-white/60 text-xs flex items-center gap-1"><Network size={12}/> Local IP</span>
                   <span className="text-white font-mono text-xs">{systemInfo.network_ip}</span>
