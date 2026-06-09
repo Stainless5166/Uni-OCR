@@ -9,6 +9,8 @@ export default function Layout() {
     navigate('/login');
   };
 
+  const isLoggedIn = !!localStorage.getItem('token');
+
   return (
     <div className="flex h-screen w-full relative z-10 p-4 gap-4">
       {/* Sidebar */}
@@ -28,10 +30,12 @@ export default function Layout() {
               <ScanText size={20} />
               <span className="hidden md:block font-medium">Console</span>
             </NavLink>
-            <NavLink to="/settings" className={({isActive}) => `flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${isActive ? 'bg-white/10 text-white shadow-inner' : 'text-white/50 hover:bg-white/5 hover:text-white'}`}>
-              <Settings size={20} />
-              <span className="hidden md:block font-medium">Settings</span>
-            </NavLink>
+            {isLoggedIn && (
+              <NavLink to="/settings" className={({isActive}) => `flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${isActive ? 'bg-white/10 text-white shadow-inner' : 'text-white/50 hover:bg-white/5 hover:text-white'}`}>
+                <Settings size={20} />
+                <span className="hidden md:block font-medium">Settings</span>
+              </NavLink>
+            )}
             <NavLink to="/docs-ui" className={({isActive}) => `flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${isActive ? 'bg-white/10 text-white shadow-inner' : 'text-white/50 hover:bg-white/5 hover:text-white'}`}>
               <FileCode2 size={20} />
               <span className="hidden md:block font-medium">API Docs</span>
@@ -40,10 +44,17 @@ export default function Layout() {
         </div>
         
         <div className="px-4">
-          <button onClick={handleLogout} className="w-full flex items-center justify-center md:justify-start gap-3 px-3 py-3 rounded-xl text-red-400 hover:bg-red-500/10 transition-all">
-            <LogOut size={20} />
-            <span className="hidden md:block font-medium">Logout</span>
-          </button>
+          {isLoggedIn ? (
+            <button onClick={handleLogout} className="w-full flex items-center justify-center md:justify-start gap-3 px-3 py-3 rounded-xl text-red-400 hover:bg-red-500/10 transition-all">
+              <LogOut size={20} />
+              <span className="hidden md:block font-medium">Logout</span>
+            </button>
+          ) : (
+            <button onClick={() => navigate('/login')} className="w-full flex items-center justify-center md:justify-start gap-3 px-3 py-3 rounded-xl text-primary hover:bg-primary/10 transition-all">
+              <LogOut size={20} className="rotate-180" />
+              <span className="hidden md:block font-medium">Login</span>
+            </button>
+          )}
         </div>
       </aside>
 
