@@ -84,7 +84,7 @@ def get_system_info():
     try:
         uni_ver = version("uniocr")
     except PackageNotFoundError:
-        uni_ver = "3.0.0" # Fallback
+        uni_ver = "3.0.1" # Fallback
 
     info = {
         "uniocr_version": uni_ver,

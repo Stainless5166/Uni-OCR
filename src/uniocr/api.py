@@ -50,7 +50,7 @@ app = FastAPI(
         "Upload images or PDFs and receive structured text, Markdown, "
         "and layout blocks in a single JSON response."
     ),
-    version="3.0.0",
+    version="3.0.1",
     docs_url="/docs",
     redoc_url="/redoc",
 )
