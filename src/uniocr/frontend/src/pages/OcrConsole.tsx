@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { UploadCloud, FileType, Type, FileJson, Loader2, Download, ScanText } from 'lucide-react';
-import { FileViewer } from '@open-file-viewer/react';
-import '@open-file-viewer/core/style.css';
+
 
 export default function OcrConsole({ isPublic }: { isPublic: boolean }) {
   const [file, setFile] = useState<File | null>(null);
@@ -165,8 +164,8 @@ export default function OcrConsole({ isPublic }: { isPublic: boolean }) {
   const renderResult = () => {
     if (format === 'pdf' && pdfUrl) {
       return (
-        <div className="h-full flex flex-col bg-white/5 rounded-b-xl overflow-hidden relative">
-          <FileViewer file={pdfUrl} fileName="output.pdf" className="w-full h-full border-0" />
+        <div className="absolute inset-0">
+          <iframe src={pdfUrl} className="w-full h-full border-0" title="PDF Preview" />
         </div>
       );
     }
