@@ -103,6 +103,13 @@ async def custom_swagger_ui_html():
         .swagger-ui .response-col_status { color: #e0e0e0; }
         .swagger-ui .response-col_description p { color: #999; }
         .swagger-ui .markdown p, .swagger-ui .markdown pre { color: #b0b0b0; }
+        
+        /* Fix text contrast for endpoint paths on dark backgrounds */
+        .swagger-ui .opblock .opblock-summary-path,
+        .swagger-ui .opblock .opblock-summary-path a { color: #fff !important; font-weight: bold; }
+        .swagger-ui .opblock.opblock-get .opblock-summary-path a { color: #8ce1ff !important; }
+        .swagger-ui .opblock.opblock-post .opblock-summary-path a { color: #8cf2b8 !important; }
+        .swagger-ui .opblock.opblock-delete .opblock-summary-path a { color: #ff8c8c !important; }
     </style>
     """
     
