@@ -145,6 +145,10 @@ docker build \
 docker build --build-arg PREDOWNLOAD_MODELS=true -t uniocr:offline-ready .
 ```
 
+> 构建 GPU 镜像本身并不会启用 GPU 推理 —— 需要在运行容器时设置环境变量
+> `UNIOCR_DEVICE=gpu`（或保持默认值 `auto`：只要安装的 paddle 版本能检测到可用
+> GPU 就会自动使用，在纯 CPU 构建下则不做任何改变）。
+
 ## 🔧 引擎优先级
 
 | 优先级 | 引擎 | 适用场景 | 速度 |

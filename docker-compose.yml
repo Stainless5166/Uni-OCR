@@ -13,6 +13,9 @@ services:
     environment:
       - UNIOCR_MLX_VLM_URL=${UNIOCR_MLX_VLM_URL:-}
       - UNIOCR_MLX_VLM_MODEL=${UNIOCR_MLX_VLM_MODEL:-PaddlePaddle/PaddleOCR-VL-1.6}
+      # auto | cpu | gpu | gpu:N. "auto" is a no-op unless the image was built
+      # with a paddlepaddle-gpu PADDLE_PACKAGE — see the Dockerfile.
+      - UNIOCR_DEVICE=${UNIOCR_DEVICE:-auto}
     volumes:
       - model-cache:/home/uniocr/.paddlex
       - ocr-data:/app/data

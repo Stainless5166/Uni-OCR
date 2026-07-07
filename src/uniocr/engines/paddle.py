@@ -9,7 +9,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from .base import BaseOCREngine
 from ..models import Document, DocumentPage, Block
@@ -136,6 +136,33 @@ def _shutdown_mlx_vlm_server() -> None:
         _mlx_vlm_process = None
 
 
+def _cuda_device_available() -> bool:
+    """Check whether the installed paddle build can see a working CUDA device."""
+    try:
+        import paddle
+        return bool(paddle.device.is_compiled_with_cuda() and paddle.device.cuda.device_count() > 0)
+    except Exception:
+        return False
+
+
+def _resolve_device(explicit: Optional[str]) -> Tuple[str, bool]:
+    """Resolve the device to run PaddleOCR-VL on.
+
+    Returns ``(device, was_auto_detected)``. ``was_auto_detected`` tells the
+    caller whether it's safe to silently fall back to CPU on failure: an
+    explicit request (constructor arg or ``UNIOCR_DEVICE=cpu``/``gpu``) should
+    fail loudly instead, since that's a deployment the operator explicitly
+    configured and wants to know is broken.
+    """
+    requested = explicit or os.environ.get("UNIOCR_DEVICE", "auto")
+    if requested != "auto":
+        return requested, False
+
+    if _cuda_device_available():
+        return "gpu", True
+    return "cpu", True
+
+
 # ======================================================================
 # Adapter
 # ======================================================================
@@ -155,12 +182,12 @@ class PaddleOCRVLAdapter(BaseOCREngine):
 
     def __init__(
         self,
-        device: str = "cpu",
+        device: Optional[str] = None,
         mlx_vlm_url: Optional[str] = None,
         mlx_vlm_model: Optional[str] = None,
         pipeline_version: str = "v1.6",
     ) -> None:
-        self._device = device
+        self._device, self._device_is_auto = _resolve_device(device)
         self._mlx_vlm_url = mlx_vlm_url or os.environ.get("UNIOCR_MLX_VLM_URL")
         self._mlx_vlm_model = mlx_vlm_model or os.environ.get(
             "UNIOCR_MLX_VLM_MODEL", _MLX_VLM_DEFAULT_MODEL
@@ -204,13 +231,30 @@ class PaddleOCRVLAdapter(BaseOCREngine):
             )
         else:
             logger.info(
-                "PaddleOCR-VL running in CPU-only mode (device=%s). "
+                "PaddleOCR-VL running with device=%s. "
                 "Install mlx-vlm for automatic Apple Neural Engine acceleration.",
                 self._device,
             )
 
-        logger.info("Loading PaddleOCR-VL pipeline…")
-        self._pipeline = PaddleOCRVL(**kwargs)
+        logger.info("Loading PaddleOCR-VL pipeline (device=%s)…", self._device)
+        try:
+            self._pipeline = PaddleOCRVL(**kwargs)
+        except Exception:
+            # Only auto-detected devices get a silent fallback - an explicit
+            # UNIOCR_DEVICE=gpu (or constructor arg) should fail loudly, since
+            # that's a deployment the operator configured and needs to see is
+            # broken, not something to paper over.
+            if not self._device_is_auto or self._device == "cpu":
+                raise
+            logger.warning(
+                "PaddleOCR-VL pipeline failed to load on auto-detected device=%s; "
+                "falling back to CPU.",
+                self._device,
+                exc_info=True,
+            )
+            self._device = "cpu"
+            kwargs["device"] = "cpu"
+            self._pipeline = PaddleOCRVL(**kwargs)
         return self._pipeline
 
     def is_available(self) -> bool:
