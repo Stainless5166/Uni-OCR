@@ -8,10 +8,14 @@ FROM python:3.10-slim AS builder
 WORKDIR /app
 
 # build-essential is a safety net for any optional dependency that doesn't
-# publish a prebuilt wheel for this platform/Python version. It never
-# reaches the final image, so keeping it here costs nothing at runtime.
+# publish a prebuilt wheel for this platform/Python version. libgl1 etc. are
+# needed here too (not just in the runtime stage) because the optional
+# PREDOWNLOAD_MODELS step below actually imports cv2/paddleocr in this
+# stage, which dlopen()s libGL at import time. None of this reaches the
+# final image either way.
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends build-essential && \
+    apt-get install -y --no-install-recommends \
+        build-essential libgl1 libglib2.0-0 libsm6 libxrender1 libxext6 && \
     rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml README.md LICENSE ./
