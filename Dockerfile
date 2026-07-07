@@ -34,6 +34,19 @@ RUN pip install --no-cache-dir --upgrade pip && \
         "${PADDLE_PACKAGE}" && \
     pip install --no-cache-dir --prefix=/install "paddleocr[doc-parser]>=3.0.0" ".[api]"
 
+# Optionally pre-download the PaddleOCR-VL model weights (~1.8GB) at build
+# time instead of on first request, so a container running on a
+# network-isolated Docker network (e.g. compose `internal: true`) can still
+# serve its first request. Off by default since it adds ~1.8GB to every
+# build; enable with --build-arg PREDOWNLOAD_MODELS=true. The `mkdir -p`
+# keeps the COPY in the runtime stage below valid either way.
+ARG PREDOWNLOAD_MODELS=false
+ENV PYTHONPATH=/install/lib/python3.10/site-packages
+RUN mkdir -p /root/.paddlex && \
+    if [ "$PREDOWNLOAD_MODELS" = "true" ]; then \
+        python -c "from paddleocr import PaddleOCRVL; PaddleOCRVL(device='cpu', pipeline_version='v1.6')"; \
+    fi
+
 # ---------------------------------------------------------------------------
 # Runtime stage — same base (paddlepaddle only ships glibc/manylinux wheels,
 # so Alpine/musl isn't viable here), but with no compiler, no pip cache, and
@@ -65,10 +78,15 @@ RUN apt-get update && \
 
 COPY --from=builder /install /usr/local
 
-# App-writable paths: the SQLite DB under ./data and the non-root user's home
-# (model/cache downloads). Everything else can stay owned by root.
+# Carries over the pre-downloaded model cache when PREDOWNLOAD_MODELS=true
+# was set at build time; otherwise this is just an empty directory and the
+# app downloads models on first use as before.
+COPY --from=builder --chown=uniocr:uniocr /root/.paddlex /home/uniocr/.paddlex
+
+# App-writable path for the SQLite DB. /home/uniocr is already owned by
+# uniocr (created via useradd --create-home, plus --chown above).
 RUN mkdir -p /app/data && \
-    chown -R uniocr:uniocr /app/data /home/uniocr
+    chown uniocr:uniocr /app/data
 
 USER uniocr
 ENV HOME=/home/uniocr
