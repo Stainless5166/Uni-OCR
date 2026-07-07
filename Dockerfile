@@ -17,8 +17,22 @@ RUN apt-get update && \
 COPY pyproject.toml README.md LICENSE ./
 COPY src/ src/
 
+# Override these to build a GPU image instead, e.g.:
+#   --build-arg PADDLE_PACKAGE=paddlepaddle-gpu==3.3.0
+#   --build-arg PADDLE_INDEX_URL=https://www.paddlepaddle.org.cn/packages/stable/cu126/
+# (pick the cuXXX tag at or below what `nvidia-smi` reports as the driver's
+# max supported CUDA version). The GPU wheel bundles its own CUDA/cuDNN/NCCL,
+# so no system CUDA toolkit is added to the image — only a host-side NVIDIA
+# driver + the NVIDIA Container Toolkit (for device passthrough at runtime)
+# are required. Defaults below reproduce the plain CPU build.
+ARG PADDLE_PACKAGE="paddlepaddle>=3.2.1"
+ARG PADDLE_INDEX_URL=
+
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir --prefix=/install ".[paddle,api]"
+    pip install --no-cache-dir --prefix=/install \
+        ${PADDLE_INDEX_URL:+--index-url ${PADDLE_INDEX_URL} --extra-index-url https://pypi.org/simple} \
+        "${PADDLE_PACKAGE}" && \
+    pip install --no-cache-dir --prefix=/install "paddleocr[doc-parser]>=3.0.0" ".[api]"
 
 # ---------------------------------------------------------------------------
 # Runtime stage — same base (paddlepaddle only ships glibc/manylinux wheels,
