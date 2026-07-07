@@ -1,25 +1,63 @@
+# ---------------------------------------------------------------------------
+# Build stage — installs uniocr and its (large) OCR dependencies into an
+# isolated prefix so none of the build tooling or intermediate pip state
+# ends up in the image that actually ships.
+# ---------------------------------------------------------------------------
+FROM python:3.10-slim AS builder
+
+WORKDIR /app
+
+# build-essential is a safety net for any optional dependency that doesn't
+# publish a prebuilt wheel for this platform/Python version. It never
+# reaches the final image, so keeping it here costs nothing at runtime.
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends build-essential && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY pyproject.toml README.md LICENSE ./
+COPY src/ src/
+
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir --prefix=/install ".[paddle,api]"
+
+# ---------------------------------------------------------------------------
+# Runtime stage — same base (paddlepaddle only ships glibc/manylinux wheels,
+# so Alpine/musl isn't viable here), but with no compiler, no pip cache, and
+# no leftover apt metadata: just the installed packages and runtime libs.
+# ---------------------------------------------------------------------------
 FROM python:3.10-slim AS base
+
+# Don't write .pyc files or buffer stdout/stderr — also keeps a read-only
+# rootfs viable since /app never needs a __pycache__ write.
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
 # Auto-link GHCR package to GitHub repository
 LABEL org.opencontainers.image.source=https://github.com/yuanweize/uni-ocr
 
-# System dependencies
+# Non-root runtime user. Give it a real home directory since PaddleX/model
+# caches resolve under $HOME by default.
+RUN groupadd --gid 1000 uniocr && \
+    useradd --uid 1000 --gid uniocr --create-home --shell /usr/sbin/nologin uniocr
+
+# Runtime shared libs only (no compiler toolchain in this stage)
 RUN apt-get update && \
+    apt-get upgrade -y && \
     apt-get install -y --no-install-recommends \
         libgl1 libglib2.0-0 libsm6 libxrender1 libxext6 && \
     rm -rf /var/lib/apt/lists/*
 
-# Copy project files
-COPY pyproject.toml README.md LICENSE ./
-COPY src/ src/
+COPY --from=builder /install /usr/local
 
-# Install uniocr with PaddleOCR + API deps
-RUN pip install --no-cache-dir ".[paddle,api]"
+# App-writable paths: the SQLite DB under ./data and the non-root user's home
+# (model/cache downloads). Everything else can stay owned by root.
+RUN mkdir -p /app/data && \
+    chown -R uniocr:uniocr /app/data /home/uniocr
 
-# Pre-download models on build (optional but recommended for faster cold start)
-# RUN python -c "from paddleocr import PaddleOCRVL; PaddleOCRVL(device='cpu')"
+USER uniocr
+ENV HOME=/home/uniocr
 
 EXPOSE 8000
 

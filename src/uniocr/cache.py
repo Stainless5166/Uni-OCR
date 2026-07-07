@@ -18,7 +18,7 @@ class OcrCache:
         self.keys: List[str] = []
         
     def get_or_extract(self, engine: str, content: bytes) -> Document:
-        file_hash = hashlib.md5(content).hexdigest()
+        file_hash = hashlib.md5(content, usedforsecurity=False).hexdigest()
         cache_key = f"{engine}_{file_hash}"
         
         if cache_key in self.cache:

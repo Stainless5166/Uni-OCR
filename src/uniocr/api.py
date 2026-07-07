@@ -58,8 +58,14 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
+    # allow_origins="*" + allow_credentials=True lets any origin make
+    # cookie/credentialed requests, which browsers forbid for good reason.
+    # Auth here is a manually-attached Bearer token (see frontend's
+    # localStorage usage), not a browser credential, so we don't need
+    # allow_credentials at all — keep the wildcard for cross-origin API
+    # consumers (n8n, Dify, etc.) without the dangerous combination.
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -316,6 +322,8 @@ async def extract_url(
     try:
         ocr = _get_ocr(engine)
         doc = ocr.extract(url)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
     except FileNotFoundError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except RuntimeError as exc:
@@ -353,7 +361,7 @@ async def extract_base64(req: ExtractBase64Request) -> JSONResponse:
     return JSONResponse(content=_build_response(doc, elapsed))
 
 
-@app.post("/extract/batch", response_model=BatchResult, tags=["OCR"])
+@app.post("/extract/batch", response_model=BatchResult, tags=["OCR"], dependencies=[Depends(verify_public_or_authenticated)])
 async def extract_batch(
     files: List[UploadFile] = File(..., description="Multiple files to process"),
     engine: str = Form("auto"),
@@ -413,7 +421,9 @@ async def extract_to_pdf(
     tmp_in.close()
     in_path = Path(tmp_in.name)
     
-    out_path = Path(tempfile.mktemp(suffix=".pdf"))
+    tmp_out = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+    tmp_out.close()
+    out_path = Path(tmp_out.name)
     
     try:
         doc = ocr_cache.get_or_extract(engine, content)
@@ -444,9 +454,11 @@ if frontend_dist.exists() and (frontend_dist / "index.html").exists():
     
     @app.get("/{full_path:path}", include_in_schema=False)
     async def serve_frontend(full_path: str):
-        # Serve exact file if exists
-        target_file = frontend_dist / full_path
-        if target_file.exists() and target_file.is_file():
+        # Resolve and confirm the target stays within frontend_dist to prevent
+        # path traversal (e.g. "../../data/uniocr.db") from escaping the static root.
+        static_root = frontend_dist.resolve()
+        target_file = (static_root / full_path).resolve()
+        if target_file.is_relative_to(static_root) and target_file.is_file():
             return FileResponse(target_file)
         # Fallback to index.html for SPA routing
-        return FileResponse(frontend_dist / "index.html")
+        return FileResponse(static_root / "index.html")
