@@ -109,9 +109,12 @@ uniocr serve --port 8000
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | `GET` | `/health` | 健康检查（含引擎列表） |
+| `GET` | `/engines` | 列出当前环境可用的 OCR 引擎 |
 | `POST` | `/extract` | 上传文件提取（返回 JSON/Markdown） |
-| `POST` | `/extract/pdf` | 上传文件提取（直接返回双层 PDF 文件） |
 | `POST` | `/extract/url` | 通过 URL 提取 |
+| `POST` | `/extract/base64` | 通过 Base64 编码内容提取（JSON） |
+| `POST` | `/extract/batch` | 一次请求批量提取多个文件 |
+| `POST` | `/extract/pdf` | 上传文件提取（直接返回双层 PDF 文件） |
 
 *(以上接口若关闭了公开访问，则均可通过在 Header 传入 `Authorization: Bearer <API_KEY>` 进行调用)*
 
@@ -121,6 +124,25 @@ uniocr serve --port 8000
 git clone https://github.com/yuanweize/uni-ocr.git
 cd uni-ocr
 docker compose up -d --build
+```
+
+`docker-compose.yml` 默认仅将 API 绑定到 `127.0.0.1`（如需局域网/远程访问，可覆盖 `UNIOCR_BIND_HOST`，例如设置为 Tailscale IP）。SQLite 数据库（管理员凭据、API Key、JWT 密钥）保存在具名卷中，容器重启后依然保留。
+
+> **首次启动提示**：镜像默认使用 `admin`/`admin` 且开启了公开访问。请在首次启动后立即登录 `/settings`，设置真实密码，并在不希望匿名调用时关闭公开访问。
+
+### 可选构建变体
+
+```bash
+# GPU 构建 —— 需要主机安装匹配的 CUDA 驱动和 NVIDIA Container Toolkit。
+# 请选择不高于 `nvidia-smi` 显示的 CUDA 版本的 cuXXX 标签。
+docker build \
+  --build-arg PADDLE_PACKAGE=paddlepaddle-gpu==3.3.0 \
+  --build-arg PADDLE_INDEX_URL=https://www.paddlepaddle.org.cn/packages/stable/cu126/ \
+  -t uniocr:gpu .
+
+# 在构建时预下载约 1.8GB 的 PaddleOCR-VL 模型，而非等到首次请求时再下载 ——
+# 适用于网络隔离的部署环境。
+docker build --build-arg PREDOWNLOAD_MODELS=true -t uniocr:offline-ready .
 ```
 
 ## 🔧 引擎优先级
