@@ -353,7 +353,7 @@ async def extract_base64(req: ExtractBase64Request) -> JSONResponse:
     return JSONResponse(content=_build_response(doc, elapsed))
 
 
-@app.post("/extract/batch", response_model=BatchResult, tags=["OCR"])
+@app.post("/extract/batch", response_model=BatchResult, tags=["OCR"], dependencies=[Depends(verify_public_or_authenticated)])
 async def extract_batch(
     files: List[UploadFile] = File(..., description="Multiple files to process"),
     engine: str = Form("auto"),
@@ -444,9 +444,11 @@ if frontend_dist.exists() and (frontend_dist / "index.html").exists():
     
     @app.get("/{full_path:path}", include_in_schema=False)
     async def serve_frontend(full_path: str):
-        # Serve exact file if exists
-        target_file = frontend_dist / full_path
-        if target_file.exists() and target_file.is_file():
+        # Resolve and confirm the target stays within frontend_dist to prevent
+        # path traversal (e.g. "../../data/uniocr.db") from escaping the static root.
+        static_root = frontend_dist.resolve()
+        target_file = (static_root / full_path).resolve()
+        if target_file.is_relative_to(static_root) and target_file.is_file():
             return FileResponse(target_file)
         # Fallback to index.html for SPA routing
-        return FileResponse(frontend_dist / "index.html")
+        return FileResponse(static_root / "index.html")
