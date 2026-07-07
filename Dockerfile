@@ -17,8 +17,40 @@ RUN apt-get update && \
 COPY pyproject.toml README.md LICENSE ./
 COPY src/ src/
 
+# Override these to build a GPU image instead, e.g.:
+#   --build-arg PADDLE_PACKAGE=paddlepaddle-gpu==3.3.0
+#   --build-arg PADDLE_INDEX_URL=https://www.paddlepaddle.org.cn/packages/stable/cu126/
+# (pick the cuXXX tag at or below what `nvidia-smi` reports as the driver's
+# max supported CUDA version). The GPU wheel bundles its own CUDA/cuDNN/NCCL,
+# so no system CUDA toolkit is added to the image — only a host-side NVIDIA
+# driver + the NVIDIA Container Toolkit (for device passthrough at runtime)
+# are required. Defaults below reproduce the plain CPU build.
+ARG PADDLE_PACKAGE="paddlepaddle>=3.2.1"
+ARG PADDLE_INDEX_URL=
+
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir --prefix=/install ".[paddle,api]"
+    pip install --no-cache-dir --prefix=/install \
+        ${PADDLE_INDEX_URL:+--index-url ${PADDLE_INDEX_URL} --extra-index-url https://pypi.org/simple} \
+        "${PADDLE_PACKAGE}" && \
+    pip install --no-cache-dir --prefix=/install "paddleocr[doc-parser]>=3.0.0" ".[api]"
+
+# Optionally pre-download the PaddleOCR-VL model weights (~1.8GB) at build
+# time instead of on first request, so a container running on a
+# network-isolated Docker network (e.g. compose `internal: true`) can still
+# serve its first request. Off by default since it adds ~1.8GB to every
+# build; enable with --build-arg PREDOWNLOAD_MODELS=true. The `mkdir -p`
+# keeps the COPY in the runtime stage below valid either way.
+#
+# device='cpu' here regardless of PADDLE_PACKAGE: the build environment has
+# no GPU, so 'gpu' would fail. This only fetches weight files, which are
+# device-agnostic — the actual CPU/GPU execution backend is chosen at
+# predict() time by the app's own `device` setting, not by this call.
+ARG PREDOWNLOAD_MODELS=false
+ENV PYTHONPATH=/install/lib/python3.10/site-packages
+RUN mkdir -p /root/.paddlex && \
+    if [ "$PREDOWNLOAD_MODELS" = "true" ]; then \
+        python -c "from paddleocr import PaddleOCRVL; PaddleOCRVL(device='cpu', pipeline_version='v1.6')"; \
+    fi
 
 # ---------------------------------------------------------------------------
 # Runtime stage — same base (paddlepaddle only ships glibc/manylinux wheels,
@@ -51,10 +83,15 @@ RUN apt-get update && \
 
 COPY --from=builder /install /usr/local
 
-# App-writable paths: the SQLite DB under ./data and the non-root user's home
-# (model/cache downloads). Everything else can stay owned by root.
+# Carries over the pre-downloaded model cache when PREDOWNLOAD_MODELS=true
+# was set at build time; otherwise this is just an empty directory and the
+# app downloads models on first use as before.
+COPY --from=builder --chown=uniocr:uniocr /root/.paddlex /home/uniocr/.paddlex
+
+# App-writable path for the SQLite DB. /home/uniocr is already owned by
+# uniocr (created via useradd --create-home, plus --chown above).
 RUN mkdir -p /app/data && \
-    chown -R uniocr:uniocr /app/data /home/uniocr
+    chown uniocr:uniocr /app/data
 
 USER uniocr
 ENV HOME=/home/uniocr
