@@ -15,7 +15,7 @@ WORKDIR /app
 # final image either way.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        build-essential libgl1 libglib2.0-0 libsm6 libxrender1 libxext6 && \
+        build-essential libgl1 libglib2.0-0 libsm6 libxrender1 libxext6 libgomp1 && \
     rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml README.md LICENSE ./
@@ -83,11 +83,14 @@ LABEL org.opencontainers.image.source=https://github.com/yuanweize/uni-ocr
 RUN groupadd --gid 1000 uniocr && \
     useradd --uid 1000 --gid uniocr --create-home --shell /usr/sbin/nologin uniocr
 
-# Runtime shared libs only (no compiler toolchain in this stage)
+# Runtime shared libs only (no compiler toolchain in this stage). libgomp1
+# is needed by paddlepaddle's compiled OpenMP-parallelized ops at inference
+# time, not just at import — a plain `import paddle` won't surface its
+# absence, only an actual extract request does.
 RUN apt-get update && \
     apt-get upgrade -y && \
     apt-get install -y --no-install-recommends \
-        libgl1 libglib2.0-0 libsm6 libxrender1 libxext6 && \
+        libgl1 libglib2.0-0 libsm6 libxrender1 libxext6 libgomp1 && \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /install /usr/local
