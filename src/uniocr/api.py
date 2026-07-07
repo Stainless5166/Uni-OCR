@@ -58,8 +58,14 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
+    # allow_origins="*" + allow_credentials=True lets any origin make
+    # cookie/credentialed requests, which browsers forbid for good reason.
+    # Auth here is a manually-attached Bearer token (see frontend's
+    # localStorage usage), not a browser credential, so we don't need
+    # allow_credentials at all — keep the wildcard for cross-origin API
+    # consumers (n8n, Dify, etc.) without the dangerous combination.
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -316,6 +322,8 @@ async def extract_url(
     try:
         ocr = _get_ocr(engine)
         doc = ocr.extract(url)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
     except FileNotFoundError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except RuntimeError as exc:
@@ -413,7 +421,9 @@ async def extract_to_pdf(
     tmp_in.close()
     in_path = Path(tmp_in.name)
     
-    out_path = Path(tempfile.mktemp(suffix=".pdf"))
+    tmp_out = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+    tmp_out.close()
+    out_path = Path(tmp_out.name)
     
     try:
         doc = ocr_cache.get_or_extract(engine, content)
