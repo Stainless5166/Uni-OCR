@@ -6,13 +6,26 @@ services:
       dockerfile: Dockerfile
     container_name: uniocr
     ports:
-      - "${UNIOCR_PORT:-8000}:8000"
+      # Bind to loopback by default so the API isn't reachable from the LAN/internet
+      # out of the box. Override UNIOCR_BIND_HOST (e.g. to your Tailscale IP or
+      # 0.0.0.0) if you deliberately want it exposed more broadly.
+      - "${UNIOCR_BIND_HOST:-127.0.0.1}:${UNIOCR_PORT:-8000}:8000"
     environment:
       - UNIOCR_MLX_VLM_URL=${UNIOCR_MLX_VLM_URL:-}
       - UNIOCR_MLX_VLM_MODEL=${UNIOCR_MLX_VLM_MODEL:-PaddlePaddle/PaddleOCR-VL-1.6}
     volumes:
-      - model-cache:/root/.paddlex
+      - model-cache:/home/uniocr/.paddlex
+      - ocr-data:/app/data
     restart: unless-stopped
+    # Runs as the non-root "uniocr" user baked into the image (see Dockerfile);
+    # these drop the extra privileges Docker grants containers by default.
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: ${UNIOCR_MEM_LIMIT:-4g}
+    cpus: ${UNIOCR_CPU_LIMIT:-2}
+    pids_limit: 512
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
@@ -27,4 +40,7 @@ services:
 
 volumes:
   model-cache:
+    driver: local
+  # Persists the SQLite DB (admin credentials, API keys, JWT secret) across restarts.
+  ocr-data:
     driver: local
