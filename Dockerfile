@@ -45,15 +45,20 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # build; enable with --build-arg PREDOWNLOAD_MODELS=true. The `mkdir -p`
 # keeps the COPY in the runtime stage below valid either way.
 #
-# device='cpu' here regardless of PADDLE_PACKAGE: the build environment has
-# no GPU, so 'gpu' would fail. This only fetches weight files, which are
-# device-agnostic — the actual CPU/GPU execution backend is chosen at
-# predict() time by the app's own `device` setting, not by this call.
+# This always uses a throwaway plain-CPU paddle install to do the actual
+# downloading, regardless of PADDLE_PACKAGE. paddlepaddle-gpu's compiled
+# core (libpaddle.so) unconditionally dlopen()s libcuda.so.1 the moment
+# `paddle` is imported — that's the NVIDIA *driver's* library, not
+# something the pip wheel bundles, and a `docker build` environment has no
+# GPU/driver access at all, so this fails before device='cpu' even matters.
+# The plain CPU wheel has no such dependency. The downloaded weight files
+# are identical either way — see the note on the real install above.
 ARG PREDOWNLOAD_MODELS=false
-ENV PYTHONPATH=/install/lib/python3.10/site-packages
 RUN mkdir -p /root/.paddlex && \
     if [ "$PREDOWNLOAD_MODELS" = "true" ]; then \
-        python -c "from paddleocr import PaddleOCRVL; PaddleOCRVL(device='cpu', pipeline_version='v1.6')"; \
+        pip install --no-cache-dir --prefix=/predl "paddlepaddle>=3.2.1" "paddleocr[doc-parser]>=3.0.0" && \
+        PYTHONPATH=/predl/lib/python3.10/site-packages python -c \
+            "from paddleocr import PaddleOCRVL; PaddleOCRVL(device='cpu', pipeline_version='v1.6')"; \
     fi
 
 # ---------------------------------------------------------------------------
