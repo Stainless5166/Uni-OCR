@@ -40,6 +40,11 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # serve its first request. Off by default since it adds ~1.8GB to every
 # build; enable with --build-arg PREDOWNLOAD_MODELS=true. The `mkdir -p`
 # keeps the COPY in the runtime stage below valid either way.
+#
+# device='cpu' here regardless of PADDLE_PACKAGE: the build environment has
+# no GPU, so 'gpu' would fail. This only fetches weight files, which are
+# device-agnostic — the actual CPU/GPU execution backend is chosen at
+# predict() time by the app's own `device` setting, not by this call.
 ARG PREDOWNLOAD_MODELS=false
 ENV PYTHONPATH=/install/lib/python3.10/site-packages
 RUN mkdir -p /root/.paddlex && \
