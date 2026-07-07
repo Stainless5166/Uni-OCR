@@ -110,9 +110,12 @@ uniocr serve --port 8000
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `GET` | `/health` | Health check & engine list |
-| `POST` | `/extract` | Extract text from uploaded file (JSON/Markdown) |
+| `GET` | `/engines` | List OCR engines available in this environment |
+| `POST` | `/extract` | Extract text from an uploaded file (JSON/Markdown) |
+| `POST` | `/extract/url` | Extract text from a URL |
+| `POST` | `/extract/base64` | Extract text from a Base64-encoded payload (JSON) |
+| `POST` | `/extract/batch` | Extract text from multiple uploaded files in one request |
 | `POST` | `/extract/pdf` | Extract text and return a Searchable PDF file |
-| `POST` | `/extract/url` | Extract text from URL |
 
 *(If Public API Access is disabled, these endpoints require an `Authorization: Bearer <API_KEY>` header).*
 
@@ -122,6 +125,25 @@ uniocr serve --port 8000
 git clone https://github.com/yuanweize/uni-ocr.git
 cd uni-ocr
 docker compose up -d --build
+```
+
+By default `docker-compose.yml` only binds the API to `127.0.0.1` (override `UNIOCR_BIND_HOST`, e.g. a Tailscale IP, for LAN/remote access). The SQLite database (admin credentials, API keys, JWT secret) persists in a named volume across restarts.
+
+> **First boot**: the image ships with `admin`/`admin` and Public API Access enabled. Log in at `/settings` immediately, set a real password, and turn off public access if you don't want unauthenticated extraction.
+
+### Optional build variants
+
+```bash
+# GPU build — needs a matching CUDA driver + the NVIDIA Container Toolkit on
+# the host. Pick a cuXXX tag at or below `nvidia-smi`'s reported CUDA version.
+docker build \
+  --build-arg PADDLE_PACKAGE=paddlepaddle-gpu==3.3.0 \
+  --build-arg PADDLE_INDEX_URL=https://www.paddlepaddle.org.cn/packages/stable/cu126/ \
+  -t uniocr:gpu .
+
+# Pre-download the ~1.8GB PaddleOCR-VL model at build time instead of on
+# first request — useful for network-isolated deployments.
+docker build --build-arg PREDOWNLOAD_MODELS=true -t uniocr:offline-ready .
 ```
 
 ## 🔧 Engine Priority
