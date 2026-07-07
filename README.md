@@ -146,6 +146,11 @@ docker build \
 docker build --build-arg PREDOWNLOAD_MODELS=true -t uniocr:offline-ready .
 ```
 
+> Building the GPU image doesn't turn on GPU inference by itself — set
+> `UNIOCR_DEVICE=gpu` (or leave it at the default `auto`, which uses the GPU
+> automatically if the installed paddle build can see one, and is a no-op on
+> a plain CPU build) as an environment variable on the running container.
+
 ## 🔧 Engine Priority
 
 | Priority | Engine | Best for | Speed |
