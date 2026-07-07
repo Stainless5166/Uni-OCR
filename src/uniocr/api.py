@@ -24,6 +24,7 @@ warnings.filterwarnings("ignore", message=".*'mlx-vlm-server' does not support.*
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile, status, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
+from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.openapi.docs import get_swagger_ui_html
@@ -140,7 +141,11 @@ def _problem_details(
         "request_id": str(uuid.uuid4()),
         **kwargs,
     }
-    return JSONResponse(status_code=status_code, content=content)
+    # Pydantic's RequestValidationError.errors() can embed the raw exception
+    # instance in an error's `ctx` field (e.g. a failed isinstance check on
+    # UploadFile), which plain json.dumps() can't serialize. jsonable_encoder
+    # converts anything like that to a JSON-safe form instead of 500ing.
+    return JSONResponse(status_code=status_code, content=jsonable_encoder(content))
 
 
 @app.exception_handler(HTTPException)
